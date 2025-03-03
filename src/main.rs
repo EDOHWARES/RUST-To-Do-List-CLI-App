@@ -6,7 +6,7 @@ struct Task {
     done: bool,
 }
 
-fn save_tasks(tasks: &Vec<Task>) {
+fn save_tasks(tasks: &[Task]) {
     let data = serde_json::to_string(tasks).expect("Failed to serialize");
     fs::write("tasks.json", data).expect("Failed to write file");
 }
