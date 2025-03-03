@@ -1,12 +1,23 @@
-use std::io;
+use std::{fs, io};
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct Task {
     name: String,
     done: bool,
 }
+
+fn save_tasks(tasks: &Vec<Task>) {
+    let data = serde_json::to_string(tasks).expect("Failed to serialize");
+    fs::write("tasks.json", data).expect("Failed to write file");
+}
+
+fn load_tasks() -> Vec<Task> {
+    let data = fs::read_to_string("tasks.json").unwrap_or("[]".to_string());
+    serde_json::from_str(&data).unwrap_or_else(|_| vec![])
+}
+
 fn main() {
-    let mut tasks: Vec<Task> = Vec::new();
+    let mut tasks: Vec<Task> = load_tasks();
 
     loop {
         println!("\nOptions:");
@@ -29,52 +40,68 @@ fn main() {
                     .read_line(&mut input)
                     .expect("Failed to read line");
 
-                let task = Task {
+                tasks.push(Task {
                     name: input.trim().to_string(),
                     done: false,
-                };
+                });
 
-                tasks.push(task);
-            },
+                save_tasks(&tasks);
+                println!("✅ Task added!");
+            }
             "2" => {
                 println!("\nTasks:");
-                for (i, task) in tasks.iter().enumerate()  {
-                    let status = if task.done {"✅"} else {"[ ]"};
-                    println!("{}. {} {}", i + 1, status, task.name);
+                if tasks.is_empty() {
+                    println!("📭 No tasks yet!");
+                } else {
+                    for (i, task) in tasks.iter().enumerate() {
+                        let status = if task.done { "✅" } else { "[ ]" };
+                        println!("{}. {} {}", i + 1, status, task.name);
+                    }
                 }
-            }, 
+            }
             "3" => {
                 println!("Enter task number to mark as done:");
                 let mut index = String::new();
-                io::stdin().read_line(&mut index).expect("Failed to read input");
+                io::stdin()
+                    .read_line(&mut index)
+                    .expect("Failed to read input");
 
                 if let Ok(i) = index.trim().parse::<usize>() {
                     if i > 0 && i <= tasks.len() {
                         tasks[i - 1].done = true;
+                        save_tasks(&tasks);
+                        println!("✅ Task marked as done!");
                     } else {
-                        println!("Invalid task number.");
+                        println!("❌ Invalid task number.");
                     }
                 } else {
-                    println!("Please enter a valid number.")
+                    println!("❌ Please enter a valid number.")
                 }
-            }, 
+            }
             "4" => {
                 println!("Enter a task number to delete:");
                 let mut index = String::new();
-                io::stdin().read_line(&mut index).expect("Failed to read input");
+                io::stdin()
+                    .read_line(&mut index)
+                    .expect("Failed to read input");
 
                 if let Ok(i) = index.trim().parse::<usize>() {
-                    if i > 0 && i <=tasks.len() {
+                    if i > 0 && i <= tasks.len() {
                         tasks.remove(i - 1);
+                        save_tasks(&tasks);
+                        println!("🗑️ Task deleted!");
                     } else {
-                        println!("Invalid task number.");
+                        println!("❌ Invalid task number.");
                     }
                 } else {
-                    println!("Invalid task number.");
+                    println!("❌ Please enter a valid number.")
                 }
-            },
-            "5" => break,
-            _=> println!("Invalid option"),
+            }
+            "5" => {
+                println!("👋 Goodbye!");
+                break;
+            }
+            _ => println!("❌ Invalid option!"),
         }
     }
 }
